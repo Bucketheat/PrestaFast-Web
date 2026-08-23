@@ -12,22 +12,30 @@ export function BotonWhatsAppCliente({ cliente, compacto }: Props) {
   const pagadoHoy = yaPagoHoy(cliente)
   const telefono = cliente.telefono.replace(/\D/g, '')
   const listo = telefono.length >= 10 && !pagadoHoy
-  const href = listo ? enlaceWhatsApp(cliente.telefono, textoAvisoClienteWhatsApp(cliente)) : undefined
+  const size = compacto ? 'small' : 'medium'
+  const title = pagadoHoy ? 'Ya pagó hoy' : !telefono ? 'Sin teléfono' : 'Enviar aviso por WhatsApp'
+
+  if (!listo) {
+    return (
+      <Button size={size} variant="outlined" color="success" startIcon={<WhatsAppIcon />} disabled title={title}>
+        {pagadoHoy ? 'Pagó hoy' : 'WhatsApp'}
+      </Button>
+    )
+  }
 
   return (
     <Button
-      size={compacto ? 'small' : 'medium'}
+      size={size}
       variant="outlined"
       color="success"
       startIcon={<WhatsAppIcon />}
-      href={href}
+      href={enlaceWhatsApp(cliente.telefono, textoAvisoClienteWhatsApp(cliente))}
       target="_blank"
       rel="noreferrer"
-      disabled={!listo}
+      title={title}
       onClick={(event) => event.stopPropagation()}
-      title={pagadoHoy ? 'Ya pagó hoy' : !telefono ? 'Sin teléfono' : 'Enviar aviso por WhatsApp'}
     >
-      {pagadoHoy ? 'Pagó hoy' : 'WhatsApp'}
+      WhatsApp
     </Button>
   )
 }
