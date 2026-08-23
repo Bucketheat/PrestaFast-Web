@@ -9,6 +9,7 @@ import { estadisticasCartera, generarAlertas, hidratarCliente } from '../domain/
 import { useGeocodificarClientes } from '../hooks/useGeocodificarClientes'
 import { useCaja } from '../store/CajaProvider'
 import { useClientes } from '../store/ClientesProvider'
+import { useGastos } from '../store/GastosProvider'
 
 const columnasScore: GridColDef[] = [
   { field: 'numeroControl', headerName: 'Control', width: 140 },
@@ -24,6 +25,8 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const { clientes, actualizar } = useClientes()
   const { caja } = useCaja()
+  const { gastos } = useGastos()
+  const gastosPendientes = gastos.filter((item) => item.estado === 'pendiente_autorizacion').length
   const hidratados = clientes.map(hidratarCliente)
   const stats = estadisticasCartera(hidratados)
   const cajaResumen = resumenCaja(caja, hidratados)
@@ -62,6 +65,11 @@ export function DashboardPage() {
 
       {altas > 0 ? (
         <Alert severity="error">{altas} alerta(s) alta(s): autorizaciones, INE o atrasos graves.</Alert>
+      ) : null}
+      {gastosPendientes > 0 ? (
+        <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => navigate('/gastos')}>Revisar</Button>}>
+          {gastosPendientes} gasto(s) del cobrador esperan foto y tu aprobación.
+        </Alert>
       ) : null}
 
       <Grid container spacing={2}>

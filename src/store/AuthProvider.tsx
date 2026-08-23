@@ -29,7 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       usuario,
       async login(nombreUsuario, clave) {
-        let encontrado = await autenticar(nombreUsuario, clave)
+        const apiRemota = Boolean(String(import.meta.env.VITE_API_URL ?? '').trim())
+        let encontrado = apiRemota ? null : await autenticar(nombreUsuario, clave)
 
         try {
           const res = await fetch(apiUrl('/api/auth/login'), {
@@ -42,9 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sessionStorage.setItem('prestamos.token', data.token)
             encontrado = data.usuario
             registrarRemoto(data.usuario)
+          } else if (apiRemota) {
+            const cuerpo = (await res.json().catch(() => ({}))) as { message?: string }
+            throw new Error(cuerpo.message || 'Usuario o contraseña incorrectos')
           }
-        } catch {
-          // Si el API no está arriba, se usa el listado local de usuarios.
+        } catch (err) {
+          if (apiRemota) throw err
         }
 
         if (!encontrado) throw new Error('Usuario o contraseña incorrectos')

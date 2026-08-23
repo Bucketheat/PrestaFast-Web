@@ -13,6 +13,7 @@ import { ControlPrintPage } from './pages/ControlPrintPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { CajaPage } from './pages/CajaPage'
+import { GastosPage } from './pages/GastosPage'
 import { ReciboPrintPage } from './pages/ReciboPrintPage'
 import { ReportesPage } from './pages/ReportesPage'
 import { RutasPage } from './pages/RutasPage'
@@ -22,6 +23,7 @@ import { AuthProvider, useAuth } from './store/AuthProvider'
 import { CierresProvider } from './store/CierresProvider'
 import { ClientesProvider } from './store/ClientesProvider'
 import { CajaProvider } from './store/CajaProvider'
+import { GastosProvider } from './store/GastosProvider'
 import { ConfigProvider } from './store/ConfigProvider'
 import { UsuariosProvider } from './store/UsuariosProvider'
 import { theme } from './theme'
@@ -51,6 +53,7 @@ function AppRoutes() {
         <Route path="reportes" element={<SoloAdmin><ReportesPage /></SoloAdmin>} />
         <Route path="rutas" element={<SoloAdmin><RutasPage /></SoloAdmin>} />
         <Route path="caja" element={<SoloAdmin><CajaPage /></SoloAdmin>} />
+        <Route path="gastos" element={<GastosPage />} />
         <Route path="usuarios" element={<SoloAdmin><UsuariosPage /></SoloAdmin>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
@@ -68,9 +71,11 @@ export default function App() {
             <CajaProvider>
               <ClientesProvider>
                 <CierresProvider>
-                  <BrowserRouter>
-                    <AppRoutes />
-                  </BrowserRouter>
+                  <GastosProvider>
+                    <BrowserRouter>
+                      <AppRoutes />
+                    </BrowserRouter>
+                  </GastosProvider>
                 </CierresProvider>
               </ClientesProvider>
             </CajaProvider>

@@ -10,6 +10,7 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined'
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined'
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined'
 import { MarcaPrestaFast } from '../components/MarcaPrestaFast'
 import {
   AppBar,
@@ -41,12 +42,14 @@ const menuAdmin = [
   { to: '/reportes', label: 'Reportes', icon: <AssessmentOutlinedIcon /> },
   { to: '/rutas', label: 'Cierres', icon: <RouteOutlinedIcon /> },
   { to: '/caja', label: 'Caja', icon: <SavingsOutlinedIcon /> },
+  { to: '/gastos', label: 'Gastos y nómina', icon: <ReceiptLongOutlinedIcon /> },
   { to: '/usuarios', label: 'Usuarios', icon: <ManageAccountsOutlinedIcon /> },
 ]
 
 const menuCobrador = [
   { to: '/ruta', label: 'Mi ruta', icon: <RouteOutlinedIcon /> },
   { to: '/clientes/nuevo', label: 'Registrar', icon: <GroupsOutlinedIcon /> },
+  { to: '/gastos', label: 'Mis gastos', icon: <ReceiptLongOutlinedIcon /> },
 ]
 
 export function AdminLayout() {
