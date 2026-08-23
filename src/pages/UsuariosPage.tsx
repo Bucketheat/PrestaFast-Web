@@ -40,10 +40,8 @@ export function UsuariosPage() {
   const { usuarios, crear, actualizar, cambiarEstado, eliminar, hidratarDesdeApi } = useUsuarios()
 
   useEffect(() => {
-    void hidratarDesdeApi()
-    // Una sola lectura al abrir la pantalla; el listado local sigue siendo la fuente.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void hidratarDesdeApi().catch(() => undefined)
+  }, [hidratarDesdeApi])
   const [abierto, setAbierto] = useState(false)
   const [editandoId, setEditandoId] = useState<string | null>(null)
   const [error, setError] = useState('')

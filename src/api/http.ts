@@ -17,6 +17,10 @@ export function haySesionApi() {
   return Boolean(sessionStorage.getItem('prestamos.token'))
 }
 
+export function hayApiRemota() {
+  return Boolean(API_BASE)
+}
+
 export async function apiJson<T>(ruta: string, init?: RequestInit): Promise<T> {
   const res = await fetch(apiUrl(ruta), {
     ...init,

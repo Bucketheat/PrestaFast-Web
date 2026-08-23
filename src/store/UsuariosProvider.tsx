@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { apiUrl } from '../api/http'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { apiJson, hayApiRemota, haySesionApi } from '../api/http'
 import {
   hashClave,
   publicoDeUsuario,
@@ -35,6 +35,7 @@ type UsuarioRemoto = {
   rol: RolUsuario
   telefono?: string
   activo: boolean
+  creadoEn?: string
 }
 
 type UsuariosContextValue = {
@@ -70,6 +71,27 @@ function normalizarUsuario(valor: string) {
   return valor.trim().toLowerCase()
 }
 
+function deduplicar(lista: UsuarioSistema[]): UsuarioSistema[] {
+  const porUsuario = new Map<string, UsuarioSistema>()
+  for (const item of lista) {
+    porUsuario.set(normalizarUsuario(item.usuario), item)
+  }
+  return [...porUsuario.values()]
+}
+
+function desdeRemoto(remoto: UsuarioRemoto, local?: UsuarioSistema): UsuarioSistema {
+  return {
+    id: remoto.id,
+    usuario: remoto.usuario,
+    nombre: remoto.nombre,
+    rol: remoto.rol,
+    telefono: remoto.telefono,
+    activo: remoto.activo,
+    claveHash: local?.claveHash ?? '',
+    creadoEn: remoto.creadoEn ?? local?.creadoEn ?? new Date().toISOString(),
+  }
+}
+
 async function semillaInicial(): Promise<UsuarioSistema[]> {
   const ahora = new Date().toISOString()
   return [
@@ -98,33 +120,36 @@ function adminsActivos(usuarios: UsuarioSistema[], exceptId?: string) {
   return usuarios.filter((item) => item.rol === 'admin' && item.activo && item.id !== exceptId)
 }
 
-async function sincronizarApi(ruta: string, metodo: string, cuerpo?: unknown) {
-  const token = sessionStorage.getItem('prestamos.token')
-  if (!token) return
-  try {
-    await fetch(apiUrl(`/api/usuarios${ruta}`), {
-      method: metodo,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-    })
-  } catch {
-    // El listado local sigue siendo la fuente si el API no está arriba.
-  }
-}
-
 export function UsuariosProvider({ children }: { children: ReactNode }) {
-  const [usuarios, setUsuarios] = useState<UsuarioSistema[]>(leerUsuarios)
-  const [listos, setListos] = useState(leerUsuarios().length > 0)
+  const apiRemota = hayApiRemota()
+  const [usuarios, setUsuarios] = useState<UsuarioSistema[]>(() => (apiRemota ? [] : leerUsuarios()))
+  const [listos, setListos] = useState(() => !apiRemota && leerUsuarios().length > 0)
 
   useEffect(() => {
     let vivo = true
     void (async () => {
+      if (apiRemota) {
+        if (haySesionApi()) {
+          try {
+            const remotos = await apiJson<UsuarioRemoto[]>('/api/usuarios')
+            if (!vivo) return
+            const siguiente = deduplicar(remotos.map((item) => desdeRemoto(item)))
+            setUsuarios(siguiente)
+            persistir(siguiente)
+          } catch {
+            // Sin token de admin se lista al entrar a Usuarios.
+          }
+        }
+        if (vivo) setListos(true)
+        return
+      }
+
       const actual = leerUsuarios()
       if (actual.length > 0) {
-        if (vivo) setListos(true)
+        if (vivo) {
+          setUsuarios(deduplicar(actual))
+          setListos(true)
+        }
         return
       }
       const semilla = await semillaInicial()
@@ -137,6 +162,14 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
     return () => {
       vivo = false
     }
+  }, [apiRemota])
+
+  const hidratarDesdeApi = useCallback(async () => {
+    if (!haySesionApi()) return
+    const remotos = await apiJson<UsuarioRemoto[]>('/api/usuarios')
+    const siguiente = deduplicar(remotos.map((item) => desdeRemoto(item)))
+    setUsuarios(siguiente)
+    persistir(siguiente)
   }, [])
 
   const value = useMemo<UsuariosContextValue>(
@@ -144,6 +177,7 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
       usuarios,
       listos,
       async autenticar(nombreUsuario, clave) {
+        if (apiRemota) return null
         let lista = usuarios
         if (lista.length === 0) {
           lista = leerUsuarios()
@@ -167,6 +201,27 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
         if (!alta.clave || alta.clave.length < 8) {
           throw new Error('La contraseña debe tener al menos 8 caracteres')
         }
+        if (apiRemota) {
+          if (!haySesionApi()) throw new Error('Inicia sesión de nuevo para guardar en el servidor')
+          const remoto = await apiJson<UsuarioRemoto>('/api/usuarios', {
+            method: 'POST',
+            body: JSON.stringify({
+              usuario,
+              nombre: alta.nombre.trim(),
+              rol: alta.rol,
+              telefono: alta.telefono?.trim() || undefined,
+              clave: alta.clave,
+              activo: alta.activo ?? true,
+            }),
+          })
+          const nuevo = desdeRemoto(remoto)
+          setUsuarios((actual) => {
+            const siguiente = deduplicar([...actual, nuevo])
+            persistir(siguiente)
+            return siguiente
+          })
+          return nuevo
+        }
         const nuevo: UsuarioSistema = {
           id: `user-${crypto.randomUUID().slice(0, 8)}`,
           usuario,
@@ -181,15 +236,6 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
           const siguiente = [...actual, nuevo]
           persistir(siguiente)
           return siguiente
-        })
-        void sincronizarApi('', 'POST', {
-          id: nuevo.id,
-          usuario: nuevo.usuario,
-          nombre: nuevo.nombre,
-          rol: nuevo.rol,
-          telefono: nuevo.telefono,
-          clave: alta.clave,
-          activo: nuevo.activo,
         })
         return nuevo
       },
@@ -206,6 +252,27 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
         if (edicion.clave && edicion.clave.length < 8) {
           throw new Error('La contraseña debe tener al menos 8 caracteres')
         }
+        if (apiRemota) {
+          if (!haySesionApi()) throw new Error('Inicia sesión de nuevo para guardar en el servidor')
+          const remoto = await apiJson<UsuarioRemoto>(`/api/usuarios/${edicion.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              usuario,
+              nombre: edicion.nombre.trim(),
+              rol: edicion.rol,
+              telefono: edicion.telefono?.trim() || undefined,
+              activo: edicion.activo,
+              clave: edicion.clave || undefined,
+            }),
+          })
+          const siguienteUsuario = desdeRemoto(remoto, actual)
+          setUsuarios((lista) => {
+            const siguiente = deduplicar(lista.map((item) => (item.id === edicion.id ? siguienteUsuario : item)))
+            persistir(siguiente)
+            return siguiente
+          })
+          return siguienteUsuario
+        }
         const claveHash = edicion.clave ? await hashClave(edicion.clave) : actual.claveHash
         const siguienteUsuario: UsuarioSistema = {
           ...actual,
@@ -221,14 +288,6 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
           persistir(siguiente)
           return siguiente
         })
-        void sincronizarApi(`/${edicion.id}`, 'PUT', {
-          usuario,
-          nombre: siguienteUsuario.nombre,
-          rol: siguienteUsuario.rol,
-          telefono: siguienteUsuario.telefono,
-          activo: siguienteUsuario.activo,
-          clave: edicion.clave || undefined,
-        })
         return siguienteUsuario
       },
       cambiarEstado(id, activo) {
@@ -237,12 +296,19 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
         if (actual.rol === 'admin' && !activo && adminsActivos(usuarios, id).length === 0) {
           throw new Error('Debe quedar al menos un administrador activo')
         }
-        setUsuarios((lista) => {
-          const siguiente = lista.map((item) => (item.id === id ? { ...item, activo } : item))
-          persistir(siguiente)
-          return siguiente
+        void (async () => {
+          if (apiRemota) {
+            if (!haySesionApi()) throw new Error('Inicia sesión de nuevo para guardar en el servidor')
+            await apiJson(`/api/usuarios/${id}`, { method: 'PUT', body: JSON.stringify({ activo }) })
+          }
+          setUsuarios((lista) => {
+            const siguiente = lista.map((item) => (item.id === id ? { ...item, activo } : item))
+            persistir(siguiente)
+            return siguiente
+          })
+        })().catch((err: unknown) => {
+          window.alert(err instanceof Error ? err.message : 'No se pudo cambiar el estado')
         })
-        void sincronizarApi(`/${id}`, 'PUT', { activo })
       },
       eliminar(id, actorId) {
         if (id === actorId) throw new Error('No puedes eliminar tu propio usuario')
@@ -251,49 +317,27 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
         if (actual.rol === 'admin' && adminsActivos(usuarios, id).length === 0) {
           throw new Error('Debe quedar al menos un administrador')
         }
-        setUsuarios((lista) => {
-          const siguiente = lista.filter((item) => item.id !== id)
-          persistir(siguiente)
-          return siguiente
-        })
-        void sincronizarApi(`/${id}`, 'DELETE')
-      },
-      async hidratarDesdeApi() {
-        const token = sessionStorage.getItem('prestamos.token')
-        if (!token) return
-        try {
-          const res = await fetch(apiUrl('/api/usuarios'), {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          if (!res.ok) return
-          const remotos = (await res.json()) as UsuarioRemoto[]
+        void (async () => {
+          if (apiRemota) {
+            if (!haySesionApi()) throw new Error('Inicia sesión de nuevo para guardar en el servidor')
+            await apiJson(`/api/usuarios/${id}`, { method: 'DELETE' })
+          }
           setUsuarios((lista) => {
-            const porUsuario = new Map(lista.map((item) => [item.usuario, item]))
-            for (const remoto of remotos) {
-              const local = porUsuario.get(remoto.usuario) ?? lista.find((item) => item.id === remoto.id)
-              porUsuario.set(remoto.usuario, {
-                id: remoto.id,
-                usuario: remoto.usuario,
-                nombre: remoto.nombre,
-                rol: remoto.rol,
-                telefono: remoto.telefono,
-                activo: remoto.activo,
-                claveHash: local?.claveHash ?? '',
-                creadoEn: local?.creadoEn ?? new Date().toISOString(),
-              })
-            }
-            const siguiente = [...porUsuario.values()]
+            const siguiente = lista.filter((item) => item.id !== id)
             persistir(siguiente)
             return siguiente
           })
-        } catch {
-          // Sin API se sigue usando el listado local.
-        }
+        })().catch((err: unknown) => {
+          window.alert(err instanceof Error ? err.message : 'No se pudo eliminar')
+        })
       },
+      hidratarDesdeApi,
       registrarRemoto(sesion) {
         setUsuarios((lista) => {
-          if (lista.some((item) => item.id === sesion.id || item.usuario === sesion.usuario)) return lista
-          const siguiente = [
+          if (lista.some((item) => item.id === sesion.id || item.usuario === sesion.usuario)) {
+            return deduplicar(lista)
+          }
+          const siguiente = deduplicar([
             ...lista,
             {
               ...sesion,
@@ -301,13 +345,13 @@ export function UsuariosProvider({ children }: { children: ReactNode }) {
               activo: true,
               creadoEn: new Date().toISOString(),
             },
-          ]
+          ])
           persistir(siguiente)
           return siguiente
         })
       },
     }),
-    [usuarios, listos],
+    [usuarios, listos, apiRemota, hidratarDesdeApi],
   )
 
   return <UsuariosContext.Provider value={value}>{children}</UsuariosContext.Provider>

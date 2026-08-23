@@ -22,7 +22,7 @@ function leerSesion(): UsuarioSesion | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { autenticar, registrarRemoto } = useUsuarios()
+  const { autenticar, registrarRemoto, hidratarDesdeApi } = useUsuarios()
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(leerSesion)
 
   const value = useMemo<AuthContextValue>(
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             sessionStorage.setItem('prestamos.token', data.token)
             encontrado = data.usuario
             registrarRemoto(data.usuario)
+            await hidratarDesdeApi().catch(() => undefined)
           } else if (apiRemota) {
             const cuerpo = (await res.json().catch(() => ({}))) as { message?: string }
             throw new Error(cuerpo.message || 'Usuario o contraseña incorrectos')
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUsuario(null)
       },
     }),
-    [usuario, autenticar, registrarRemoto],
+    [usuario, autenticar, registrarRemoto, hidratarDesdeApi],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
