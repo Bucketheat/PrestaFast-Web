@@ -15,6 +15,7 @@ export function generarControlHtml(cliente: Cliente): string {
   const { prestamo } = cliente
   const ineFrente = cliente.documentos.find((doc) => doc.tipo === 'ine_frente')
   const pagare = cliente.documentos.find((doc) => doc.tipo === 'pagare')
+  const evidencia = cliente.documentos.find((doc) => doc.tipo === 'evidencia_domicilio')
   const filas = prestamo.cuotas
     .map(
       (cuota) => `
@@ -39,6 +40,7 @@ export function generarControlHtml(cliente: Cliente): string {
     .muted { color: #57534e; }
     .folio { font-size: 28px; font-weight: 700; letter-spacing: 0.04em; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin: 16px 0; }
+    .docs-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #d6d3d1; padding: 6px 8px; font-size: 13px; }
     th { background: #0f3d3e; color: #fff; text-align: left; }
@@ -70,7 +72,7 @@ export function generarControlHtml(cliente: Cliente): string {
     <div><strong>Total a recuperar:</strong> ${escapar(money(prestamo.total))} · cargo ${escapar(money(prestamo.cargo))}</div>
   </div>
 
-  <div class="docs grid">
+  <div class="docs docs-3">
     <div>
       <h2>INE</h2>
       ${ineFrente ? `<img src="${ineFrente.dataUrl}" alt="INE" />` : '<p class="muted">Sin archivo</p>'}
@@ -78,6 +80,10 @@ export function generarControlHtml(cliente: Cliente): string {
     <div>
       <h2>Pagaré</h2>
       ${pagare?.dataUrl.startsWith('data:image') ? `<img src="${pagare.dataUrl}" alt="Pagaré" />` : '<p class="muted">Pagaré cargado en el expediente</p>'}
+    </div>
+    <div>
+      <h2>Evidencia frente a la casa</h2>
+      ${evidencia?.dataUrl.startsWith('data:image') ? `<img src="${evidencia.dataUrl}" alt="Cliente frente a su casa" />` : '<p class="muted">Sin foto de registro</p>'}
     </div>
   </div>
 

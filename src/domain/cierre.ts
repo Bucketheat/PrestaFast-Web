@@ -11,12 +11,48 @@ export type CierreRuta = {
   esperado: number
   cobrado: number
   desembolsado: number
+  cambio: number
   aEntregar: number
   notas: string
   cerradoEn: string
 }
 
 export const CIERRES_STORAGE_KEY = 'prestamos.cierres.v1'
+export const CAMBIO_RUTA_KEY = 'prestamos.cambioRuta.v1'
+
+export function cuentaCierreCaja(cobrado: number, desembolsado: number, cambio: number) {
+  const fondo = Math.max(0, Number(cambio) || 0)
+  return {
+    cambio: fondo,
+    cobrado,
+    desembolsado,
+    aEntregar: cobrado + fondo - desembolsado,
+  }
+}
+
+export function leerCambioRuta(cobradorId: string, fecha: string) {
+  try {
+    const raw = localStorage.getItem(CAMBIO_RUTA_KEY)
+    if (!raw) return 0
+    const mapa = JSON.parse(raw) as Record<string, number>
+    return Math.max(0, Number(mapa[`${cobradorId}:${fecha}`]) || 0)
+  } catch {
+    return 0
+  }
+}
+
+export function guardarCambioRuta(cobradorId: string, fecha: string, monto: number) {
+  const mapa = (() => {
+    try {
+      const raw = localStorage.getItem(CAMBIO_RUTA_KEY)
+      return raw ? (JSON.parse(raw) as Record<string, number>) : {}
+    } catch {
+      return {}
+    }
+  })()
+  mapa[`${cobradorId}:${fecha}`] = Math.max(0, Number(monto) || 0)
+  localStorage.setItem(CAMBIO_RUTA_KEY, JSON.stringify(mapa))
+}
 
 export function cuotaCobradaEl(cuota: Cliente['prestamo']['cuotas'][number], fecha: string) {
   if (cuota.pagado <= 0 && cuota.estado !== 'pagada') return false

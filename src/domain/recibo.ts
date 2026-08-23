@@ -35,6 +35,33 @@ export function enlaceWhatsApp(telefono: string, mensaje: string) {
   return `https://wa.me/${destino}?text=${encodeURIComponent(mensaje)}`
 }
 
+export function yaPagoHoy(cliente: Cliente, fecha = hoyIso()) {
+  return cliente.prestamo.cuotas.some((cuota) => {
+    if (cuota.pagadoEn === fecha && cuota.pagado > 0) return true
+    return cuota.fecha === fecha && (cuota.estado === 'pagada' || cuota.pagado >= cuota.monto)
+  })
+}
+
+/** Aviso al cliente: sin total ni cargo, para no asustar. */
+export function textoAvisoClienteWhatsApp(cliente: Cliente, fecha = hoyIso()) {
+  const nombre = cliente.nombreCompleto.trim().split(/\s+/)[0] || cliente.nombreCompleto
+  const deHoy = cliente.prestamo.cuotas.find((cuota) => cuota.fecha === fecha)
+  const lineas = [
+    `${MARCA.nombre}`,
+    `Hola ${nombre}, tu préstamo ya quedó.`,
+    `Control ${cliente.numeroControl}`,
+    `Recibiste ${money(cliente.prestamo.desembolso)}`,
+    `Tu cuota diaria es ${money(cliente.prestamo.cuotaDiaria)}`,
+    `${cliente.prestamo.plazoPagos} pagos, lunes a sábado (no domingo)`,
+  ]
+  if (deHoy && deHoy.estado !== 'pagada' && deHoy.pagado < deHoy.monto) {
+    lineas.push(`Hoy te toca el pago ${deHoy.numero} de ${cliente.prestamo.plazoPagos}: ${money(deHoy.monto - deHoy.pagado)}`)
+  } else {
+    lineas.push(`Primer cobro: ${formatFechaLarga(cliente.prestamo.fechaPrimerCobro)}`)
+  }
+  return lineas.join('\n')
+}
+
 export function generarReciboHtml(cliente: Cliente, cuota: CuotaCliente): string {
   const pagado = cuota.pagado || cuota.monto
   const restantes = cliente.prestamo.cuotas.filter((item) => item.estado !== 'pagada').length

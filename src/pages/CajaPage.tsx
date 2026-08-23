@@ -4,10 +4,12 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useEffect } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import { hoyIso } from '../domain/calendario'
 import { money } from '../domain/calculo'
 import { resumenCaja } from '../domain/caja'
 import { hidratarCliente } from '../domain/operacion'
 import { useCaja } from '../store/CajaProvider'
+import { useCierres } from '../store/CierresProvider'
 import { useClientes } from '../store/ClientesProvider'
 
 const cajaSchema = z.object({
@@ -35,7 +37,12 @@ const columnas: GridColDef[] = [
 export function CajaPage() {
   const { caja, guardar } = useCaja()
   const { clientes } = useClientes()
+  const { cierres } = useCierres()
   const resumen = resumenCaja(caja, clientes)
+  const hoy = hoyIso()
+  const cierresHoy = cierres.filter((item) => item.fecha === hoy)
+  const entregaHoy = cierresHoy.reduce((suma, item) => suma + item.aEntregar, 0)
+  const cambioHoy = cierresHoy.reduce((suma, item) => suma + (item.cambio ?? 0), 0)
   const form = useForm<CajaForm>({
     resolver: zodResolver(cajaSchema),
     defaultValues: {
@@ -74,6 +81,7 @@ export function CajaPage() {
           ['Capital inicial', money(resumen.capitalInicial), 'Lo que hay en caja para prestar'],
           ['Capital distribuida', money(resumen.capitalDistribuida), 'Dinero que ya está en la calle'],
           ['Disponible', money(resumen.capitalDisponible), 'Lo que aún puedes desembolsar'],
+          ['Cierres de hoy', money(entregaHoy), `Cambio ${money(cambioHoy)} · lo que deben entregar`],
         ].map(([label, value, hint]) => (
           <Card key={label} sx={{ flex: 1 }}>
             <CardContent>

@@ -46,6 +46,7 @@ export function ClienteDetallePage() {
   const expediente = cliente
   const ine = expediente.documentos.find((doc) => doc.tipo === 'ine_frente')
   const pagare = expediente.documentos.find((doc) => doc.tipo === 'pagare')
+  const evidencia = expediente.documentos.find((doc) => doc.tipo === 'evidencia_domicilio')
   const liquidado = expediente.prestamo.estado === 'liquidado'
 
   async function onCobrar() {
@@ -172,6 +173,16 @@ export function ClienteDetallePage() {
               <Box component="img" src={pagare.dataUrl} alt="Pagaré" sx={{ width: '100%', borderRadius: 1 }} />
             ) : (
               <Typography color="text.secondary">Archivo cargado en el expediente</Typography>
+            )}
+          </Paper>
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Paper sx={{ p: 2.5, height: '100%' }}>
+            <Typography variant="h3" sx={{ mb: 1 }}>Evidencia frente a la casa</Typography>
+            {evidencia?.dataUrl.startsWith('data:image') ? (
+              <Box component="img" src={evidencia.dataUrl} alt="Cliente frente a su casa" sx={{ width: '100%', borderRadius: 1 }} />
+            ) : (
+              <Typography color="text.secondary">Sin foto de registro en el domicilio</Typography>
             )}
           </Paper>
         </Grid>

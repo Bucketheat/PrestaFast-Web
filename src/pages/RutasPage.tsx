@@ -9,6 +9,7 @@ const columnas: GridColDef[] = [
   { field: 'cobradorNombre', headerName: 'Cobrador', flex: 1, minWidth: 160 },
   { field: 'esperado', headerName: 'Esperado', width: 120, valueFormatter: (v: number) => money(v) },
   { field: 'cobrado', headerName: 'Cobrado', width: 120, valueFormatter: (v: number) => money(v) },
+  { field: 'cambio', headerName: 'Cambio', width: 120, valueFormatter: (v: number) => money(v ?? 0) },
   { field: 'desembolsado', headerName: 'Desembolsado', width: 140, valueFormatter: (v: number) => money(v) },
   { field: 'aEntregar', headerName: 'A entregar', width: 130, valueFormatter: (v: number) => money(v) },
   { field: 'visitasPendientes', headerName: 'Pendientes', width: 120 },
@@ -23,7 +24,7 @@ export function RutasPage() {
       <Stack>
         <Typography variant="h1">Cierres de ruta</Typography>
         <Typography color="text.secondary">
-          Lo que cada cobrador cobró, desembolsó y debe entregar al terminar el día.
+          Lo que cada cobrador llevó de cambio, cobró, desembolsó y debe entregar.
         </Typography>
       </Stack>
 

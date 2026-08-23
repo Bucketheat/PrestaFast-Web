@@ -1,37 +1,57 @@
 import { Button, Paper, Stack, Typography } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { useNavigate } from 'react-router-dom'
+import { BotonWhatsAppCliente } from '../components/BotonWhatsAppCliente'
 import { formatFechaLarga } from '../domain/calendario'
 import { money } from '../domain/calculo'
+import type { Cliente } from '../domain/cliente'
+import { hidratarCliente } from '../domain/operacion'
 import { useClientes } from '../store/ClientesProvider'
-
-const columns: GridColDef[] = [
-  { field: 'numeroControl', headerName: 'No. control', width: 150 },
-  { field: 'nombreCompleto', headerName: 'Cliente', flex: 1, minWidth: 180 },
-  { field: 'telefono', headerName: 'Teléfono', width: 140 },
-  { field: 'zona', headerName: 'Ruta', width: 120 },
-  {
-    field: 'desembolso',
-    headerName: 'Desembolso',
-    width: 130,
-    align: 'right',
-    headerAlign: 'right',
-    valueFormatter: (value: number) => money(value),
-  },
-  {
-    field: 'cuotaDiaria',
-    headerName: 'Cuota',
-    width: 110,
-    align: 'right',
-    headerAlign: 'right',
-    valueFormatter: (value: number) => money(value),
-  },
-  { field: 'fechaDesembolso', headerName: 'Desembolsó', width: 180, valueFormatter: (value: string) => formatFechaLarga(value) },
-]
 
 export function ClientesPage() {
   const navigate = useNavigate()
   const { clientes } = useClientes()
+  const filas = clientes.map(hidratarCliente)
+
+  const columns: GridColDef<(typeof filas)[number]>[] = [
+    { field: 'numeroControl', headerName: 'No. control', width: 150 },
+    { field: 'nombreCompleto', headerName: 'Cliente', flex: 1, minWidth: 180 },
+    { field: 'telefono', headerName: 'Teléfono', width: 140 },
+    { field: 'zona', headerName: 'Ruta', width: 120 },
+    {
+      field: 'desembolso',
+      headerName: 'Desembolso',
+      width: 130,
+      align: 'right',
+      headerAlign: 'right',
+      valueGetter: (_value, row) => row.prestamo.desembolso,
+      valueFormatter: (value: number) => money(value),
+    },
+    {
+      field: 'cuotaDiaria',
+      headerName: 'Cuota',
+      width: 110,
+      align: 'right',
+      headerAlign: 'right',
+      valueGetter: (_value, row) => row.prestamo.cuotaDiaria,
+      valueFormatter: (value: number) => money(value),
+    },
+    {
+      field: 'fechaDesembolso',
+      headerName: 'Desembolsó',
+      width: 160,
+      valueGetter: (_value, row) => row.prestamo.fechaDesembolso,
+      valueFormatter: (value: string) => formatFechaLarga(value),
+    },
+    {
+      field: 'whatsapp',
+      headerName: 'Aviso',
+      width: 150,
+      sortable: false,
+      filterable: false,
+      renderCell: (params) => <BotonWhatsAppCliente cliente={params.row as Cliente} compacto />,
+    },
+  ]
 
   return (
     <Stack spacing={3}>
@@ -49,20 +69,14 @@ export function ClientesPage() {
 
       <Paper sx={{ p: 1 }}>
         <DataGrid
-          rows={clientes.map((cliente) => ({
-            id: cliente.id,
-            numeroControl: cliente.numeroControl,
-            nombreCompleto: cliente.nombreCompleto,
-            telefono: cliente.telefono,
-            zona: cliente.zona,
-            desembolso: cliente.prestamo.desembolso,
-            cuotaDiaria: cliente.prestamo.cuotaDiaria,
-            fechaDesembolso: cliente.prestamo.fechaDesembolso,
-          }))}
+          rows={filas}
           columns={columns}
           autoHeight
           disableRowSelectionOnClick
-          onRowClick={(params) => navigate(`/clientes/${params.id}`)}
+          onCellClick={(params) => {
+            if (params.field === 'whatsapp') return
+            navigate(`/clientes/${params.id}`)
+          }}
           pageSizeOptions={[10, 25]}
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           sx={{ border: 'none', minHeight: 280, cursor: 'pointer' }}

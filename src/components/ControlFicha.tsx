@@ -8,6 +8,7 @@ export function ControlFicha({ cliente }: { cliente: Cliente }) {
   const { prestamo } = cliente
   const ine = cliente.documentos.find((doc) => doc.tipo === 'ine_frente')
   const pagare = cliente.documentos.find((doc) => doc.tipo === 'pagare')
+  const evidencia = cliente.documentos.find((doc) => doc.tipo === 'evidencia_domicilio')
 
   return (
     <Box sx={{ p: 3, bgcolor: '#fff', color: '#1c1917' }}>
@@ -37,7 +38,7 @@ export function ControlFicha({ cliente }: { cliente: Cliente }) {
         <Typography><strong>Total:</strong> {money(prestamo.total)} · cargo {money(prestamo.cargo)}</Typography>
       </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, my: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, my: 2 }}>
         <Box>
           <Typography variant="h3" sx={{ mb: 1 }}>INE</Typography>
           {ine?.dataUrl.startsWith('data:image') ? (
@@ -52,6 +53,14 @@ export function ControlFicha({ cliente }: { cliente: Cliente }) {
             <Box component="img" src={pagare.dataUrl} alt="Pagaré" sx={{ maxWidth: '100%', maxHeight: 180 }} />
           ) : (
             <Typography color="text.secondary">Pagaré cargado en el expediente</Typography>
+          )}
+        </Box>
+        <Box>
+          <Typography variant="h3" sx={{ mb: 1 }}>Evidencia frente a la casa</Typography>
+          {evidencia?.dataUrl.startsWith('data:image') ? (
+            <Box component="img" src={evidencia.dataUrl} alt="Cliente frente a su casa" sx={{ maxWidth: '100%', maxHeight: 180 }} />
+          ) : (
+            <Typography color="text.secondary">Sin foto de registro</Typography>
           )}
         </Box>
       </Box>

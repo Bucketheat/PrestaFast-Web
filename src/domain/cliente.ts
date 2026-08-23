@@ -1,4 +1,4 @@
-export type TipoDocumento = 'ine_frente' | 'ine_reverso' | 'pagare' | 'foto_viva'
+export type TipoDocumento = 'ine_frente' | 'ine_reverso' | 'pagare' | 'foto_viva' | 'evidencia_domicilio'
 
 export type DocumentoCliente = {
   tipo: TipoDocumento

@@ -65,7 +65,8 @@ export function calcularScore(cliente: Cliente): number {
 
   const expedienteCompleto =
     Boolean(cliente.documentos.find((doc) => doc.tipo === 'ine_frente')) &&
-    Boolean(cliente.documentos.find((doc) => doc.tipo === 'pagare'))
+    Boolean(cliente.documentos.find((doc) => doc.tipo === 'pagare')) &&
+    Boolean(cliente.documentos.find((doc) => doc.tipo === 'evidencia_domicilio'))
   if (!expedienteCompleto) score = Math.min(score, 50)
 
   return Math.max(0, Math.min(100, Math.round(score * 10) / 10))
@@ -170,6 +171,17 @@ export function generarAlertas(clientes: Cliente[]): Alerta[] {
         severidad: 'alta',
         titulo: 'Falta pagaré',
         detalle: cliente.nombreCompleto,
+        clienteId: cliente.id,
+      })
+    }
+
+    if (!cliente.documentos.some((doc) => doc.tipo === 'evidencia_domicilio')) {
+      alertas.push({
+        id: `sin-evidencia-${cliente.id}`,
+        tipo: 'sin_evidencia_domicilio',
+        severidad: 'alta',
+        titulo: 'Falta evidencia frente a la casa',
+        detalle: `${cliente.nombreCompleto} no tiene foto de registro en el domicilio.`,
         clienteId: cliente.id,
       })
     }

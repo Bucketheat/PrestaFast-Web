@@ -1,9 +1,10 @@
 import { Alert, Button, Card, CardActions, CardContent, Chip, Grid, Paper, Stack, TextField, Typography } from '@mui/material'
-import { useState } from 'react'
+import { BotonWhatsAppCliente } from '../components/BotonWhatsAppCliente'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { hoyIso } from '../domain/calendario'
 import { money } from '../domain/calculo'
-import { resumenRutaDia } from '../domain/cierre'
+import { cuentaCierreCaja, guardarCambioRuta, leerCambioRuta, resumenRutaDia } from '../domain/cierre'
 import { ultimaCuotaCobrada } from '../domain/recibo'
 import { useAuth } from '../store/AuthProvider'
 import { useCierres } from '../store/CierresProvider'
@@ -18,8 +19,14 @@ export function CobradorRutaPage() {
   const resumen = resumenRutaDia(clientes, usuario?.id, hoy)
   const cierre = usuario ? cierreDeHoy(usuario.id, hoy) : undefined
   const [notas, setNotas] = useState('')
+  const [cambio, setCambio] = useState(() => (usuario ? leerCambioRuta(usuario.id, hoy) : 0))
   const [errorCierre, setErrorCierre] = useState('')
   const [cerrando, setCerrando] = useState(false)
+  const cuenta = cuentaCierreCaja(resumen.cobrado, resumen.desembolsado, cierre?.cambio ?? cambio)
+
+  useEffect(() => {
+    if (usuario) setCambio(leerCambioRuta(usuario.id, hoy))
+  }, [usuario, hoy])
 
   async function onCobrar(clienteId: string) {
     const actualizado = await cobrar(clienteId)
@@ -41,7 +48,8 @@ export function CobradorRutaPage() {
         esperado: resumen.esperado,
         cobrado: resumen.cobrado,
         desembolsado: resumen.desembolsado,
-        aEntregar: resumen.aEntregar,
+        cambio: cuenta.cambio,
+        aEntregar: cuenta.aEntregar,
         notas,
         cerradoEn: new Date().toISOString(),
       })
@@ -65,8 +73,8 @@ export function CobradorRutaPage() {
         {[
           ['Esperado', money(resumen.esperado)],
           ['Cobrado', money(resumen.cobrado)],
-          ['Desembolsado', money(resumen.desembolsado)],
-          ['A entregar', money(resumen.aEntregar)],
+          ['Cambio', money(cuenta.cambio)],
+          ['A entregar', money(cuenta.aEntregar)],
         ].map(([label, value]) => (
           <Grid key={label} size={{ xs: 6, sm: 3 }}>
             <Paper sx={{ p: 1.5 }}>
@@ -108,6 +116,7 @@ export function CobradorRutaPage() {
               <Button variant="contained" onClick={() => void onCobrar(cliente.id)}>
                 Cobrar
               </Button>
+              <BotonWhatsAppCliente cliente={cliente} compacto />
               <Button onClick={() => navigate(`/clientes/${cliente.id}`)}>Ver control</Button>
             </CardActions>
           </Card>
@@ -115,13 +124,42 @@ export function CobradorRutaPage() {
       )}
 
       <Paper sx={{ p: 2.5 }}>
-        <Typography variant="h3">Cierre del día</Typography>
+        <Typography variant="h3">Cambio para cobrar</Typography>
         <Typography color="text.secondary" sx={{ mb: 2 }}>
-          Al terminar la ruta, registra cuánto cobraste y cuánto debes entregar.
+          Billetes chicos que te da la oficina para dar cambio. Sin eso, un cliente que paga con $200 y debe $110 no se puede atender.
         </Typography>
         {cierre ? (
+          <Typography variant="h2">{money(cierre.cambio)}</Typography>
+        ) : (
+          <TextField
+            label="Cambio que te entregaron"
+            type="number"
+            value={cambio || ''}
+            onChange={(event) => {
+              const monto = Math.max(0, Number(event.target.value) || 0)
+              setCambio(monto)
+              if (usuario) guardarCambioRuta(usuario.id, hoy, monto)
+            }}
+            helperText="Efectivo de cambio. Se suma al cierre y lo devuelves al final."
+            fullWidth
+          />
+        )}
+      </Paper>
+
+      <Paper sx={{ p: 2.5 }}>
+        <Typography variant="h3">Cierre del día</Typography>
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          Cuenta de caja: cambio + cobrado − desembolsado = lo que entregas.
+        </Typography>
+        <Stack spacing={0.5} sx={{ mb: 2 }}>
+          <Typography>Cambio que llevaste: {money(cuenta.cambio)}</Typography>
+          <Typography>+ Cobrado: {money(cuenta.cobrado)}</Typography>
+          <Typography>− Desembolsado: {money(cuenta.desembolsado)}</Typography>
+          <Typography variant="h3">Debes entregar {money(cuenta.aEntregar)}</Typography>
+        </Stack>
+        {cierre ? (
           <Alert severity="success">
-            Ruta cerrada. Cobrado {money(cierre.cobrado)} · a entregar {money(cierre.aEntregar)}.
+            Ruta cerrada. Cambio {money(cierre.cambio)} · cobrado {money(cierre.cobrado)} · a entregar {money(cierre.aEntregar)}.
           </Alert>
         ) : (
           <Stack spacing={2}>

@@ -91,8 +91,9 @@ export function ClienteNuevoPage() {
   async function onSubmit(values: ClienteAltaValues) {
     const ineFrente = documentos.find((doc) => doc.tipo === 'ine_frente')
     const pagare = documentos.find((doc) => doc.tipo === 'pagare')
-    if (!ineFrente || !pagare) {
-      setErrorDocs('Carga la INE (frente) y el pagaré antes de desembolsar.')
+    const evidencia = documentos.find((doc) => doc.tipo === 'evidencia_domicilio')
+    if (!ineFrente || !pagare || !evidencia) {
+      setErrorDocs('Carga la INE (frente), el pagaré y la foto del cliente frente a su casa.')
       return
     }
     if (ineDuplicada(values.ineNumero)) {
@@ -197,8 +198,8 @@ export function ClienteNuevoPage() {
         <Typography variant="h1">Registrar cliente</Typography>
         <Typography color="text.secondary">
           {esCobrador
-            ? 'El alta llegará al administrador para que la autorice. Fija el pin en el mapa, carga INE, pagaré y la fecha de desembolso.'
-            : 'Fija el pin del domicilio, carga INE y pagaré. El sistema arma los pagos diarios y el número de control.'}
+            ? 'El alta llegará al administrador para que la autorice. Fija el pin, toma la foto del cliente frente a su casa, carga INE y pagaré.'
+            : 'Fija el pin del domicilio, toma la evidencia frente a la casa, carga INE y pagaré. El sistema arma los pagos diarios y el número de control.'}
         </Typography>
       </Stack>
 
@@ -231,6 +232,20 @@ export function ClienteNuevoPage() {
                     form.setValue('latitud', coords.latitud, { shouldValidate: true, shouldDirty: true })
                     form.setValue('longitud', coords.longitud, { shouldValidate: true, shouldDirty: true })
                   }}
+                />
+
+                <Typography variant="h3">Evidencia de registro</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Foto del cliente parado frente a su casa. Sirve de prueba de que el alta se hizo en el domicilio.
+                </Typography>
+                <CargaArchivo
+                  etiqueta="Evidencia frente a la casa"
+                  tipo="evidencia_domicilio"
+                  documento={documentos.find((d) => d.tipo === 'evidencia_domicilio')}
+                  onChange={setDocumento}
+                  camara
+                  soloImagen
+                  ayuda="Usa la cámara trasera. Que se vea la persona y la fachada."
                 />
 
                 <Typography variant="h3">INE y pagaré</Typography>
