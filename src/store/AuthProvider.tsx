@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
 import { apiUrl } from '../api/http'
+import { cuerpoLoginCifrado } from '../api/loginCifrado'
 import { AUTH_STORAGE_KEY, type UsuarioSesion } from '../domain/auth'
 import { useUsuarios } from './UsuariosProvider'
 
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const res = await fetch(apiUrl('/api/auth/login'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usuario: nombreUsuario, clave }),
+            body: JSON.stringify(await cuerpoLoginCifrado(nombreUsuario, clave)),
           })
           if (res.ok) {
             const data = (await res.json()) as { usuario: UsuarioSesion; token: string }
